@@ -147,6 +147,24 @@
   effectively GATED (needs a proper GL winsys — a box with a GPU or a fuller Mesa/EGL setup; best on
   the 64 GB box). virgl_fuzzer (cov ~765) remains the working campaign here.
 
+### Session 5 — 64GB box (34.72.203.7) unblocked → RUNTIME-CONFIRMED finding
+- SSH blocker was the GCP VPC firewall (`default-allow-ssh` limited to user IP + IAP); my egress is
+  a rotating AWS NAT pool, so user opened tcp:22 to 0.0.0.0/0 (key-auth only). Connected.
+- Box: instance-20260801-120110, 12 vCPU / 62 GB, Debian 13, NO /dev/kvm (n4) → Track A only.
+  Root disk tiny (1.8G) → all work on /mnt/fuzz-data (196G). Installed clang-19/meson/ninja/GL deps.
+- Built virglrenderer fuzzer (same SHA 7fcfce4) with coverage+ASan. from_states/drm_fuzzer NOT
+  usable (no /dev/dri render node; vgem/vkms modules absent in cloud kernel) → virgl_fuzzer (GL) only.
+- **Structure-aware TGSI generator** (research/scripts/gen_tgsi_shaders.py, 400 varied shaders):
+  coverage 512 → 1231 → **1577**. 12-worker campaign then found crashes.
+- **FINDING-04 (RUNTIME-CONFIRMED):** guest→host NULL-deref in `vrend_sync_shader_io`
+  (vrend_renderer.c:4040) — `sub_ctx->shaders[prev_type]->current` deref'd while only the selector
+  `prev` is NULL-checked. 100% reproducible (5/5) ASan SEGV @0x15c via a 218-byte malformed-TGSI
+  command stream. repro-crash.bin + fix.patch in findings/finding-04/. Fix verified (rebuild → no
+  crash). Guest→host DoS on the GL path (ChromeOS/Android relevant → strongest VRP/CVE candidate).
+- Also 6 OOM artifacts (guest-controlled large allocs; lower value, not triaged as corruption).
+- Applied the fix on the box, rebuilt, and RELAUNCHED the 12-worker campaign on the PATCHED binary
+  + merged 400-shader TGSI corpus (corpus=939) to hunt deeper bugs past finding-04. Running.
+
 ### Next steps / decisions
 - [x] Coverage-guided seeded virgl_fuzzer campaign running (cov 512→597+, corpus 118). One crash
       artifact found (crash-6faf792…) → **non-reproducible standalone (EXIT=0)** = NOT a bug
