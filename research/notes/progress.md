@@ -58,6 +58,21 @@
   for meaningful depth. Best run as a long, parallel, corpus-seeded campaign on the 64 GB box.
 - This is now the PRIMARY high-EV target for Track A.
 
+### Session 2 additions
+- venus (Vulkan renderer, src/venus/) audit: ring/region setup (`vkr_ring.c`/`vkr_transport.c`)
+  uses `vkr_region` with is_valid(overflow)/is_within/is_disjoint/aligned/power-of-two checks —
+  well-hardened. `get_resource_pointer` guarded only by assert (NDEBUG!), but callers validate via
+  regions. No bug found by reading. GL decode handlers (`vrend_decode.c`) all length-check before
+  indexing. Conclusion: virglrenderer core is also hardened + OSS-Fuzz-saturated.
+- **CRITICAL fuzzing fix**: the initial virgl_fuzzer build only instrumented the harness file
+  (cov ~12 = BLIND fuzzing). Rebuilt with `-Dc_args/-Dcpp_args=-fsanitize=fuzzer-no-link` so the
+  WHOLE library is coverage-instrumented → cov jumps to 512+. Now genuinely coverage-guided.
+- Added `research/scripts/gen_virgl_seeds.py` (valid virgl command-buffer seeds). Input format:
+  raw u32 command buffer fed to virgl_renderer_submit_cmd (FuzzMode1 pre-creates resource 10).
+- This properly-instrumented, seeded, ASan coverage-guided fuzzer on the real guest→host surface
+  is the key reusable asset. Serious campaign belongs on the 64 GB box (more cores + OSS-Fuzz
+  corpus + fresh venus/video coverage).
+
 ### Next steps / decisions
 - [ ] Seed corpus for virgl_fuzzer (OSS-Fuzz corpus or virgl_fuzzer_from_states) → real coverage.
 - [ ] Long, parallel, corpus-seeded virglrenderer campaign (needs more cores/RAM).

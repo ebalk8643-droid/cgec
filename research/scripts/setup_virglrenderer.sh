@@ -18,14 +18,18 @@ if [ ! -d "$VIRGL_DIR/.git" ]; then
 fi
 cd "$VIRGL_DIR"
 
-echo "[*] Configure (clang + ASan + libFuzzer, STATIC libs so asan rt links into fuzzer)..."
+echo "[*] Configure (clang + ASan + libFuzzer, STATIC libs, WHOLE-LIB coverage)..."
 rm -rf build-fuzz
 # Key flags:
 #  -Ddefault_library=static  -> avoids undefined __asan_* in shared libvirglrenderer.so
 #  -Db_lundef=false          -> tolerate asan symbols resolved at final link
+#  -Dc_args/-Dcpp_args=-fsanitize=fuzzer-no-link  -> CRITICAL: instruments the ENTIRE
+#     library (mesa+gallium+vrend) for coverage. Without it libFuzzer only sees the tiny
+#     harness file (cov ~12) and fuzzes virglrenderer BLIND. With it, cov jumps to 500+.
 CC=clang CXX=clang++ meson setup build-fuzz \
   -Dfuzzer=true -Dtests=true -Db_sanitize=address -Db_lundef=false \
-  -Ddefault_library=static -Dbuildtype=debugoptimized
+  -Ddefault_library=static -Dbuildtype=debugoptimized \
+  "-Dc_args=-fsanitize=fuzzer-no-link" "-Dcpp_args=-fsanitize=fuzzer-no-link"
 
 echo "[*] Build fuzzers..."
 ninja -C build-fuzz tests/fuzzer/virgl_fuzzer || true
@@ -36,8 +40,12 @@ cat <<'EOF'
   export EGL_PLATFORM=surfaceless LIBGL_ALWAYS_SOFTWARE=1 \
          GALLIUM_DRIVER=llvmpipe MESA_LOADER_DRIVER_OVERRIDE=llvmpipe \
          ASAN_OPTIONS=detect_leaks=0
+  python3 research/scripts/gen_virgl_seeds.py /tmp/virgl_corpus   # seed valid commands
   ./build-fuzz/tests/fuzzer/virgl_fuzzer -jobs=$(nproc) -workers=$(nproc) \
-       -rss_limit_mb=4096 <corpus_dir>
+       -rss_limit_mb=4096 /tmp/virgl_corpus
+
+Coverage sanity check (should be 500+, NOT ~12):
+  ./build-fuzz/tests/fuzzer/virgl_fuzzer -runs=0 /tmp/virgl_corpus  # look for "cov: NNN"
 
 NOTE: needs a SEED CORPUS of valid virgl command streams for meaningful coverage
 (random bytes are rejected as "Illegal command buffer"). Pull the OSS-Fuzz virgl_fuzzer
