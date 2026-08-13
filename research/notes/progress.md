@@ -136,6 +136,17 @@
 - gfxstream guest-command decoding is largely auto-generated (VkDecoder, bounds-checked stream
   reads); real bugs there need build+fuzz of the guest command stream (gated / heavy — best on 64GB).
 
+### Session 4 (cont.) — attempted to unlock deeper fuzzing (from_states)
+- virgl_fuzzer_from_states requires inputs >=1024 bytes (else returns 0 — explains earlier cov:2 on
+  tiny seeds). Built >=1024B seeds from valid command sequences.
+- from_states then crashes at init: `failed to initialize vrend winsys` →
+  `util_hash_table_get: Assertion 'ht' failed` (NULL ht after init failure). Its
+  `testvirgl_init_ctx_cmdbuf(VIRGL_RENDERER_USE_EGL)` winsys path does NOT come up in this headless
+  env (unlike virgl_fuzzer, which sets up its own EGL context via callbacks). This is a HARNESS/env
+  limitation, NOT a virglrenderer bug (debug assert on init failure). Deeper from_states fuzzing is
+  effectively GATED (needs a proper GL winsys — a box with a GPU or a fuller Mesa/EGL setup; best on
+  the 64 GB box). virgl_fuzzer (cov ~765) remains the working campaign here.
+
 ### Next steps / decisions
 - [x] Coverage-guided seeded virgl_fuzzer campaign running (cov 512→597+, corpus 118). One crash
       artifact found (crash-6faf792…) → **non-reproducible standalone (EXIT=0)** = NOT a bug
