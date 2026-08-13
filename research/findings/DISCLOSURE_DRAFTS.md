@@ -81,6 +81,29 @@ on `lseek<0`; worth tidying in the same series.)
 
 ---
 
+## DRAFT 3 — vrend translate_load image index off-by-one (`>` vs `>=`)
+
+**Title:** vrend/shader: use `>=` for image index bound in translate_load (follow-up to 9f1ca944)
+
+**Summary:**
+`translate_load()` checks the image register index with `>` where the sibling checks use `>=`:
+```c
+if (sinfo->sreg_index < 0 || sinfo->sreg_index > PIPE_MAX_SHADER_IMAGES)   /* allows == 32 */
+    return false;
+...
+if (!((1 << sinfo->sreg_index) & ctx->images_used_mask))   /* 1 << 32 : shift UB on uint32_t */
+    return false;
+... ctx->images[sinfo->sreg_index] ...                     /* images[32]: images[] has 32 slots */
+```
+`PIPE_MAX_SHADER_IMAGES == 32` and `images[]` has 32 entries (valid 0..31). A guest TGSI shader
+with an image load at index 32 (and image 0 declared) passes the check, causes `1 << 32` UB, and
+reads `ctx->images[32]` (one past the array; `images_used_mask` and following struct fields are
+mis-read as a `vrend_shader_image`). Low severity (in-struct over-read, not a heap overflow), but a
+clear off-by-one and incomplete part of `9f1ca944`. The other three sites (3822/3882/4166) already
+use `>=`.
+
+**Fix (finding-03 patch):** change `>` to `>=`.
+
 ## Not-included (verified safe / non-bugs)
 Per Phase-8 review, the following were checked and are hardened (do NOT report): msm/i915/amdgpu/
 panfrost count-vs-len checks (size_mul/size_add), ring-id/priority indexing (all drivers), shared

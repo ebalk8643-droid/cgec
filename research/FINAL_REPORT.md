@@ -62,6 +62,15 @@ Branch: `cursor/vm-vulnerability-research-e5c8` · Working notes: `research/` ·
 - Reachability: i915 = Intel → ChromeOS/Android relevant → possible VRP if a guest-forceable error
   path is shown. Route: upstream CVE+credit (+ VRP if impact demonstrated).
 
+### Finding 03 — vrend `translate_load` image index off-by-one (`>` vs `>=`)
+- Component: `src/vrend/vrend_shader.c: translate_load` (image path).
+- Root cause: bound check uses `sreg_index > PIPE_MAX_SHADER_IMAGES` (allows ==32) where 3 sibling
+  checks use `>=`; `images[32]` is one past the 32-slot array + `1<<32` shift UB. Incomplete part of
+  accepted fix `9f1ca944`.
+- Primitive: in-struct type-confused over-read (LOW severity; not a heap overflow — `images_used_mask`
+  follows `images[]`). Impact: guest TGSI shader → host, wrong GLSL/limited. Route: upstream one-line
+  follow-up fix + credit.
+
 ## 5. BEST FINDING
 **Finding 02 (i915 fd-UAF)** has the best combination for monetization: i915 is a Google-relevant
 host GPU (ChromeOS/Android x86), so it is the only one with a plausible VRP path in addition to
