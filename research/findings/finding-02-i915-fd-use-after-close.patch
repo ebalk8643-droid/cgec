@@ -1,0 +1,20 @@
+diff --git a/src/drm/i915/i915_resource.c b/src/drm/i915/i915_resource.c
+index 44454010..ffbb478f 100644
+--- a/src/drm/i915/i915_resource.c
++++ b/src/drm/i915/i915_resource.c
+@@ -48,13 +48,13 @@ i915_renderer_attach_resource(struct virgl_context *vctx, struct virgl_resource
+          close(fd);
+          if (size < 0) {
+             drm_err("lseek failed: %" PRId64 " (%s)", size, strerror(errno));
+-            gem_close(fd, handle);
++            gem_close(dctx->fd, handle);
+             return;
+          }
+ 
+          struct i915_object *obj = i915_object_create(handle, size);
+          if (!obj) {
+-            gem_close(fd, handle);
++            gem_close(dctx->fd, handle);
+             return;
+          }
+ 
