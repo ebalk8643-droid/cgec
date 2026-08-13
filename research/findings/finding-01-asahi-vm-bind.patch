@@ -1,0 +1,23 @@
+diff --git a/src/drm/asahi/asahi_renderer.c b/src/drm/asahi/asahi_renderer.c
+index d6845021..cf499c3f 100644
+--- a/src/drm/asahi/asahi_renderer.c
++++ b/src/drm/asahi/asahi_renderer.c
+@@ -553,12 +553,17 @@ asahi_ccmd_vm_bind(struct drm_context *dctx, struct vdrm_ccmd_req *hdr)
+       return -EINVAL;
+    }
+ 
+-   if (req->hdr.len != (sizeof(*req) + (req->stride * req->count))) {
++   /* Use overflow-safe helpers: req->stride and req->count are both u32, so a
++    * raw multiply is a 32-bit operation that can wrap and bypass this check,
++    * allowing the loop below to read past the request buffer. */
++   if (req->hdr.len != size_add(sizeof(*req), size_mul(req->stride, req->count))) {
+       drm_err("Invalid VM bind length");
+       return -EINVAL;
+    }
+ 
+    struct drm_asahi_gem_bind_op *ops = calloc(req->count, req->stride);
++   if (!ops)
++      return -ENOMEM;
+    struct drm_asahi_vm_bind bind = {
+       .vm_id = req->vm_id,
+       .stride = sizeof(*ops),

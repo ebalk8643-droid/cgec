@@ -73,6 +73,24 @@
   is the key reusable asset. Serious campaign belongs on the 64 GB box (more cores + OSS-Fuzz
   corpus + fresh venus/video coverage).
 
+### Session 3 — Phase-8 historical bug mining (drm native context) → FINDING
+- Mined virglrenderer security fixes: a wave of guest-input-validation fixes landed in the drm
+  native context (msm/panfrost/amdgpu), e.g. `99409aae drm/panfrost: Avoid reading past the end of
+  the request` — the classic "guest count vs actual request length" OOB, fixed with overflow-safe
+  `size_add(offsetof, size_mul(sizeof(elem), count))`. Fixes were piecemeal per-driver.
+- Variant hunt across ALL drm drivers: msm gem_submit, i915 execbuffer2, amdgpu cs_submit,
+  panfrost — all correctly use `size_mul`/`size_add` + `> hdr->len` checks (hardened). Other asahi
+  handlers (ioctl_simple: allow-list + len check; submit: 64-bit ptr math) are OK.
+- **FINDING-01 (findings/finding-01-*.md + .patch)**: `asahi_ccmd_vm_bind` uses a RAW 32-bit
+  multiply `req->stride * req->count` (both u32) in its length check → integer overflow bypasses
+  the check → loop `memcpy(&ops[i], payload + i*stride, stride)` reads far past the request buffer
+  (OOB read); also missing `calloc` NULL-check → NULL-deref. Guest→host DoS / potential host-heap
+  disclosure. Direct sibling of the accepted panfrost fix; asahi is the NEWEST driver
+  (`f6052597`, added in one commit, zero security fixes). Ready-to-submit patch generated.
+- HONEST caveats: reachable only on asahi (Apple-Silicon) hosts → NOT a ChromeOS/Android VRP cash
+  bug; correct route = upstream responsible disclosure to virglrenderer (CVE + credit, like the
+  sibling fixes). Static finding: cannot runtime-repro without Apple GPU.
+
 ### Next steps / decisions
 - [x] Coverage-guided seeded virgl_fuzzer campaign running (cov 512→597+, corpus 118). One crash
       artifact found (crash-6faf792…) → **non-reproducible standalone (EXIT=0)** = NOT a bug
