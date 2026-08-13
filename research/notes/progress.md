@@ -74,6 +74,11 @@
   corpus + fresh venus/video coverage).
 
 ### Next steps / decisions
+- [x] Coverage-guided seeded virgl_fuzzer campaign running (cov 512→597+, corpus 118). One crash
+      artifact found (crash-6faf792…) → **non-reproducible standalone (EXIT=0)** = NOT a bug
+      (garbage cmd header, rejected as "Illegal command buffer"); saved under findings/non-repro/.
+- [x] virgl_fuzzer_from_states built but does NOT init headless (cov 2, harness-init NULL SEGV, not
+      a virglrenderer bug); needs GL-context wiring like virgl_fuzzer or a real GPU. Use virgl_fuzzer.
 - [ ] Seed corpus for virgl_fuzzer (OSS-Fuzz corpus or virgl_fuzzer_from_states) → real coverage.
 - [ ] Long, parallel, corpus-seeded virglrenderer campaign (needs more cores/RAM).
 - [ ] Also build/fuzz gfxstream (other 3D backend) similarly.
