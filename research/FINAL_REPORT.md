@@ -79,6 +79,10 @@ reachability limits it to upstream credit only.
 - Non-gated static vein on virglrenderer is largely exhausted (surface is hardened + actively
   AI-audited). Delivered 2 real, upstream-reportable findings + full, correctly-instrumented
   fuzzing tooling.
+- KVM track (user's kvmCTF inspiration) also audited statically: SEV #VMGEXIT/PSC (the
+  CVE-2026-53360 class) is freshly hardened by a whole fix series; TDX MMIO/PIO/map_gpa validate all
+  guest sizes. Hardened. A KVM static candidate would be CVE-tier only; kvmCTF cash needs a runtime
+  exploit on a /dev/kvm + SNP/TDX host (gated).
 - Cash-tier progress is GATED on user resources:
   - (a) whitelist egress IP **3.220.100.176** on the 64 GB box → serious corpus-seeded fuzzing of
     venus/gfxstream + Google-relevant drivers; or

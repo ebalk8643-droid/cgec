@@ -112,6 +112,20 @@
   rutabaga 2d) is hardened except the 2 drm-native-context findings already reported. Non-gated
   static vein is exhausted; further cash-tier progress is gated (64GB fuzzing / kvmCTF).
 
+### Session 4 — Static Phase-8 on KVM (user's original kvmCTF inspiration)
+- Blobless sparse-clone of torvalds/linux (HEAD 3d6d817), arch/x86/kvm.
+- SEV #VMGEXIT/GHCB/PSC: the CVE-2026-53360 class was fixed by a WHOLE recent series —
+  `db3f2195d293` (require in-GHCB scratch for GHCB v2+), `121d88de56bc` (check PSC indices vs actual
+  buffer size), `c8cc238093ca`/`ce6ea7b33e00` (READ_ONCE / read indices once = TOCTOU), plus MMIO/
+  PortIO length-0 and >8-byte rejects. This area is freshly hardened (opposite of un-audited).
+- TDX (vmx/tdx.c, newer): `tdx_emulate_mmio` requires size∈{1,2,4,8}; `tdx_emulate_io` requires
+  size∈{1,2,4}; `tdx_map_gpa` validates gpa+size overflow/legal/aligned; cpuid via r12/r13. All
+  guest-controlled sizes validated. HARDENED (sibling of the SEV MMIO/PIO fixes already present).
+- CONCLUSION: KVM guest→host (SEV+TDX confidential compute) is hardened; it is the most-scrutinized
+  surface (KVM team + syzkaller + active SEV hardening series). No static candidate. Note: a KVM
+  static finding would be CVE-tier only anyway — kvmCTF cash requires a RUNTIME exploit (needs a
+  /dev/kvm host + SNP/TDX hardware), which is gated.
+
 ### Next steps / decisions
 - [x] Coverage-guided seeded virgl_fuzzer campaign running (cov 512→597+, corpus 118). One crash
       artifact found (crash-6faf792…) → **non-reproducible standalone (EXIT=0)** = NOT a bug
