@@ -70,6 +70,35 @@ SEEDS["seq_objects"] = (SEEDS["create_blend"] + SEEDS["bind_blend"]
                         + SEEDS["create_dsa"] + SEEDS["create_rasterizer"]
                         + SEEDS["fb_state"] + SEEDS["viewport"] + SEEDS["clear"])
 
+# --- CREATE_OBJECT SHADER (unlocks vrend_shader.c TGSI parser/translator: richest bug area) ---
+# Format (see tests/testvirgl_encode.c virgl_encode_shader_state + vrend_decode_create_shader):
+#   CMD0(CREATE_OBJECT, SHADER, len) | handle | type | offlen | num_tokens | so_outputs=0 | TGSI text
+#   len = ceil(text_bytes/4) + 5 ;  offlen = shader_len (bytes, incl NUL) ; num_tokens = 300 (text path)
+OBJ_SHADER = 4
+PIPE_SHADER_VERTEX = 0; PIPE_SHADER_FRAGMENT = 1
+def shader_cmd(handle, stype, tgsi_text):
+    text = tgsi_text.encode() + b"\x00"
+    shader_len = len(text)
+    tdw = (shader_len + 3) // 4
+    text_padded = text + b"\x00" * (tdw * 4 - shader_len)
+    ln = ((shader_len + 3) // 4) + 5
+    dw = [hdr(CREATE_OBJECT, OBJ_SHADER, ln), handle, stype, shader_len, 300, 0]
+    return pack(dw) + text_padded
+
+SEEDS["shader_vs"] = shader_cmd(1, PIPE_SHADER_VERTEX,
+    "VERT\nDCL IN[0]\nDCL OUT[0], POSITION\nMOV OUT[0], IN[0]\nEND\n")
+SEEDS["shader_fs"] = shader_cmd(2, PIPE_SHADER_FRAGMENT,
+    "FRAG\nDCL OUT[0], COLOR\nIMM[0] FLT32 { 1.0000, 0.0000, 0.0000, 1.0000}\nMOV OUT[0], IMM[0]\nEND\n")
+# bind shader (VIRGL_CCMD_BIND_SHADER = 31): handle + type
+BIND_SHADER = 31
+SEEDS["bind_shader_vs"] = cmd(BIND_SHADER, 0, [1, PIPE_SHADER_VERTEX])
+SEEDS["bind_shader_fs"] = cmd(BIND_SHADER, 0, [2, PIPE_SHADER_FRAGMENT])
+# full-ish pipeline: create+bind VS/FS, blend, fb, viewport, clear (drives shader link/translate)
+SEEDS["seq_shader_pipeline"] = (SEEDS["shader_vs"] + SEEDS["bind_shader_vs"]
+                                + SEEDS["shader_fs"] + SEEDS["bind_shader_fs"]
+                                + SEEDS["create_blend"] + SEEDS["bind_blend"]
+                                + SEEDS["fb_state"] + SEEDS["viewport"] + SEEDS["clear"])
+
 # Combined realistic sequence: fb_state -> viewport -> scissor -> clear
 SEEDS["seq_draw_setup"] = (SEEDS["fb_state"] + SEEDS["viewport"]
                            + SEEDS["scissor"] + SEEDS["clear"])
