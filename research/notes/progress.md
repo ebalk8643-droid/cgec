@@ -102,6 +102,16 @@
   drivers), shared drm_context.c response/shmem/blob/munmap paths, other asahi handlers.
 - Both findings have ready-to-submit patches (findings/*.patch).
 
+### Session 3 (final+) — crosvm virtio-video audit
+- Audited all 12 `unsafe` in devices/src/virtio/video (highest-unsafe crosvm virtio surface, un-fuzzed):
+  encoder ffmpeg `copy_nonoverlapping` has correct `packet_size > out_buf.size()` gate; mem_entry
+  `from_raw_parts` is a size-matched union reinterpret; resource.rs:425 copy is in a #[test];
+  vaapi/vda/fd blocks are mapping/descriptor-based. All SAFE. crosvm Rust remains hardened.
+- CONCLUSION: every non-gated surface audited (crosvm Rust: virtqueue/video/gpu/descriptor_utils/
+  flexible_array; virglrenderer: GL decode/vrend shader/venus ring/drm-native-context all drivers;
+  rutabaga 2d) is hardened except the 2 drm-native-context findings already reported. Non-gated
+  static vein is exhausted; further cash-tier progress is gated (64GB fuzzing / kvmCTF).
+
 ### Next steps / decisions
 - [x] Coverage-guided seeded virgl_fuzzer campaign running (cov 512→597+, corpus 118). One crash
       artifact found (crash-6faf792…) → **non-reproducible standalone (EXIT=0)** = NOT a bug
