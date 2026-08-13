@@ -36,10 +36,20 @@
 - Classification: Type 1/2 (memory-safe panic). At most a guest-triggerable DoS of the device
   process; almost certainly already known to OSS-Fuzz. NOT escalating.
 
-### Next steps
-- [ ] Static audit of `unsafe` in fresh/un-fuzzed surfaces, hunting the CVE-2026-53360-style
-      pattern: guest-controlled length/count validated against a constant, not the real buffer.
-      Priority: vhost_user handlers, gpu (virtio_gpu + rutabaga FFI), snd, media/video,
-      descriptor_utils.rs, vm_memory volatile ops.
-- [ ] Write structure-aware fuzz targets for the best candidates; run under ASan/UBSan.
-- [ ] For any memory error: minimize, root-cause, prove guest reachability, novelty-check.
+### Audit results (see findings/audit-crosvm-session1.md)
+- Repo-wide sweep of memory-corruption sinks (from_raw_parts/set_len/copy_nonoverlapping/ptr.add).
+- Triaged hot candidates: rutabaga 2D transfer, video mem_entry cast, GpuCommand::decode,
+  flexible_array set_len → ALL well-hardened (bounded Reader/.get()/checked_arithmetic!/clamping).
+- Ran guest→host fuzzers fs_server (~90k/s) + p9 (~52k/s) under ASan: coverage plateaued (OSS-Fuzz
+  corpus exhaustive), 0 crashes. Only crash = earlier virtqueue **panic** (DoS, likely known).
+- SYSTEMIC CONCLUSION: crosvm in-tree Rust neutralizes the classic count-vs-buffer OOB. Real
+  memory-corruption EV is in the C deps (virglrenderer/gfxstream via virtio-gpu 3D, cf.
+  CVE-2025-2509) — NOT in this repo — or in rare unsafe/snapshot-restore deserialization.
+
+### Next steps (higher EV; ideally on the 64 GB box once IP is whitelisted)
+- [ ] Build virglrenderer + gfxstream C stack; dedicated harness for guest→host 3D command stream.
+- [ ] Rutabaga2D-backed multi-command harness (pure Rust) for cross-command state bugs.
+- [ ] Audit snapshot/restore deserialization (fresh churn).
+- [ ] Long coverage-guided campaigns with fresh corpora (needs more RAM/cores).
+- [ ] DECISION for user: (a) whitelist my egress IP 3.220.100.176 on the 64 GB box for heavy
+      campaigns, and/or (b) provide nested-virt/bare-metal box to open the KVM/kvmCTF track.
