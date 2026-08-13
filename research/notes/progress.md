@@ -91,6 +91,17 @@
   bug; correct route = upstream responsible disclosure to virglrenderer (CVE + credit, like the
   sibling fixes). Static finding: cannot runtime-repro without Apple GPU.
 
+### Session 3 — Phase-8 historical bug mining (drm native context) → FINDINGS
+- Method: mine recent drm-native-context security fixes → hunt un-covered variants in least-audited
+  drivers (asahi = newest, zero fixes). See findings/README.md for the full index.
+- **FINDING-01**: `asahi_ccmd_vm_bind` raw 32-bit `stride*count` overflow → OOB read + missing
+  calloc NULL-check (sibling of panfrost `99409aae`). Apple-only → upstream CVE, not VRP cash.
+- **FINDING-02**: `i915_renderer_attach_resource` fd use-after-close `gem_close(fd,…)` after
+  `close(fd)` (sibling of panfrost `54b362cd`). Intel/Google-relevant but error-path/low-severity.
+- Verified HARDENED: msm/i915/amdgpu/panfrost count checks, ring-id/priority indexing (all
+  drivers), shared drm_context.c response/shmem/blob/munmap paths, other asahi handlers.
+- Both findings have ready-to-submit patches (findings/*.patch).
+
 ### Next steps / decisions
 - [x] Coverage-guided seeded virgl_fuzzer campaign running (cov 512→597+, corpus 118). One crash
       artifact found (crash-6faf792…) → **non-reproducible standalone (EXIT=0)** = NOT a bug
