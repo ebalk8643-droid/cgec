@@ -46,10 +46,24 @@
   memory-corruption EV is in the C deps (virglrenderer/gfxstream via virtio-gpu 3D, cf.
   CVE-2025-2509) — NOT in this repo — or in rare unsafe/snapshot-restore deserialization.
 
-### Next steps (higher EV; ideally on the 64 GB box once IP is whitelisted)
-- [ ] Build virglrenderer + gfxstream C stack; dedicated harness for guest→host 3D command stream.
-- [ ] Rutabaga2D-backed multi-command harness (pure Rust) for cross-command state bugs.
-- [ ] Audit snapshot/restore deserialization (fresh churn).
-- [ ] Long coverage-guided campaigns with fresh corpora (needs more RAM/cores).
-- [ ] DECISION for user: (a) whitelist my egress IP 3.220.100.176 on the 64 GB box for heavy
-      campaigns, and/or (b) provide nested-virt/bare-metal box to open the KVM/kvmCTF track.
+### UPDATE: working fuzzer on the REAL surface (virglrenderer C, guest→host 3D)
+- Built `virglrenderer` (freedesktop, SHA 7fcfce49616974dc7050fdbfb5bb915f4448d270) + its upstream
+  `virgl_fuzzer` under clang ASan+libFuzzer. Runs headless via Mesa llvmpipe (surfaceless EGL).
+- This is the genuine memory-corruption target reachable guest→host via crosvm virtio-gpu 3D
+  (same component family as CVE-2025-2509). Reproducible recipe: scripts/setup_virglrenderer.sh.
+- Build gotchas solved: need `libclang-rt-18-dev` (asan runtime); build STATIC
+  (`-Ddefault_library=static -Db_lundef=false`) so asan symbols resolve into the fuzzer exe.
+- Current run: ~14 exec/s, cov shallow (12) — random input rejected as "Illegal command buffer".
+  NEEDS a seed corpus of valid virgl command streams (OSS-Fuzz corpus / virgl_fuzzer_from_states)
+  for meaningful depth. Best run as a long, parallel, corpus-seeded campaign on the 64 GB box.
+- This is now the PRIMARY high-EV target for Track A.
+
+### Next steps / decisions
+- [ ] Seed corpus for virgl_fuzzer (OSS-Fuzz corpus or virgl_fuzzer_from_states) → real coverage.
+- [ ] Long, parallel, corpus-seeded virglrenderer campaign (needs more cores/RAM).
+- [ ] Also build/fuzz gfxstream (other 3D backend) similarly.
+- [ ] Audit snapshot/restore deserialization (fresh churn) as secondary.
+- [ ] DECISION for user: (a) whitelist my egress IP **3.220.100.176** on the 64 GB box so I can
+      run the serious virglrenderer campaign there; and/or (b) provide a nested-virt or bare-metal
+      box to open the KVM/kvmCTF track. Both provided boxes are guest VMs (no /dev/kvm) — fine for
+      Track A fuzzing, not for KVM.
