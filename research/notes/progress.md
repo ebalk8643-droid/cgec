@@ -126,6 +126,16 @@
   static finding would be CVE-tier only anyway — kvmCTF cash requires a RUNTIME exploit (needs a
   /dev/kvm host + SNP/TDX hardware), which is gated.
 
+### Session 4 (cont.) — gfxstream static Phase-8 (Android AVF 3D backend)
+- Blobless clone (HEAD d047a57). Mined host/ fixes: `bea594a4 Validate memory size on color buffer
+  import` (ANB image path: image dims/mem vs imported ColorBuffer). Hunted siblings in the memory
+  import paths (VkDecoderGlobalState VkAllocateMemory import): ColorBuffer/Buffer import derive
+  `allocationSize` from HOST-tracked backing (`getBufferAllocationInfo`/getColorBufferInfo), not
+  from guest values → guest can't over-request; staging read/write have `size > stagingBufferInfo.size`
+  checks. Import paths SAFE.
+- gfxstream guest-command decoding is largely auto-generated (VkDecoder, bounds-checked stream
+  reads); real bugs there need build+fuzz of the guest command stream (gated / heavy — best on 64GB).
+
 ### Next steps / decisions
 - [x] Coverage-guided seeded virgl_fuzzer campaign running (cov 512→597+, corpus 118). One crash
       artifact found (crash-6faf792…) → **non-reproducible standalone (EXIT=0)** = NOT a bug
