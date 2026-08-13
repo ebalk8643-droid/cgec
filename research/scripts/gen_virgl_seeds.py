@@ -52,6 +52,24 @@ SEEDS["scissor"] = cmd(SET_SCISSOR_STATE, 0, [0, 0, (200<<16)|200])
 # NOP
 SEEDS["nop"] = cmd(NOP, 0, [])
 
+# --- CREATE_OBJECT / BIND_OBJECT (reach vrend_decode_create_* deeper) ---
+CREATE_OBJECT = 1; BIND_OBJECT = 2
+OBJ_BLEND = 1; OBJ_RASTERIZER = 2; OBJ_DSA = 3
+# CREATE_OBJECT header carries object type in the `obj` field; payload[0]=handle.
+# blend: VIRGL_OBJ_BLEND_SIZE = MAX_COLOR_BUFS(8)+3 = 11 dwords
+SEEDS["create_blend"] = cmd(CREATE_OBJECT, OBJ_BLEND, [1] + [0]*10)
+# dsa: VIRGL_OBJ_DSA_SIZE = 5
+SEEDS["create_dsa"] = cmd(CREATE_OBJECT, OBJ_DSA, [2, 0, 0, 0, 0])
+# rasterizer: handle + several state dwords (use 9 payload dwords, decoder validates length)
+SEEDS["create_rasterizer"] = cmd(CREATE_OBJECT, OBJ_RASTERIZER, [3] + [0]*8)
+# bind the created blend object (obj type in header, handle in payload)
+SEEDS["bind_blend"] = cmd(BIND_OBJECT, OBJ_BLEND, [1])
+
+# Combined pipeline-ish sequence to reach deeper state handling
+SEEDS["seq_objects"] = (SEEDS["create_blend"] + SEEDS["bind_blend"]
+                        + SEEDS["create_dsa"] + SEEDS["create_rasterizer"]
+                        + SEEDS["fb_state"] + SEEDS["viewport"] + SEEDS["clear"])
+
 # Combined realistic sequence: fb_state -> viewport -> scissor -> clear
 SEEDS["seq_draw_setup"] = (SEEDS["fb_state"] + SEEDS["viewport"]
                            + SEEDS["scissor"] + SEEDS["clear"])
