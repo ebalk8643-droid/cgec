@@ -1,0 +1,44 @@
+# Build / tooling
+bazel-*
+.build/
+build/
+build-input/
+cmake-build-*/
+out/
+dist/
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.dll
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Secrets / local env
+.env
+.env.*
+*.pem
+*.key
+credentials*
+secrets*
+
+# Large / local-only research dumps
+notes/private/
+*.pcap
+*.pcapng
+core
+core.*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node (if any helpers appear)
+node_modules/
