@@ -13,6 +13,7 @@ Commit studied: virglrenderer `7fcfce49616974dc7050fdbfb5bb915f4448d270` (HEAD, 
 | 01 | 32-bit `stride*count` overflow in length check → OOB read + missing calloc NULL-check | `asahi/asahi_renderer.c` `asahi_ccmd_vm_bind` | int-overflow / OOB (like panfrost `99409aae`) | `99409aae` | asahi (Apple-Silicon) hosts only → upstream CVE+credit, not VRP cash |
 | 02 | fd use-after-close: `gem_close(fd,…)` after `close(fd)` on error paths | `i915/i915_resource.c` `i915_renderer_attach_resource` | UAF-of-fd (like panfrost `54b362cd`) | `54b362cd` | i915 (Intel) → ChromeOS/Android-relevant, but error-path/low-severity |
 | 03 | off-by-one image index bound (`>` vs `>=`) → `images[32]` in-struct over-read + `1<<32` UB | `vrend/vrend_shader.c` `translate_load` | off-by-one / incomplete fix of `9f1ca944` | `9f1ca944` | GL path (ChromeOS/Android), LOW severity (in-struct over-read) |
+| 04 | **NULL-deref** `prev->current` unchecked → SIGSEGV | `vrend/vrend_renderer.c` `vrend_sync_shader_io` (4040) | NULL-ptr deref / guest→host DoS | — (new) | **RUNTIME-CONFIRMED (5/5 ASan SEGV)**; GL path, guest TGSI → host crash. repro-crash.bin + fix.patch |
 
 ## Checked and found HARDENED (no bug)
 - msm `gem_submit` (size_add/size_mul + `>hdr->len`), i915 `execbuffer2` (same), amdgpu `cs_submit`

@@ -1,0 +1,25 @@
+diff --git a/src/vrend/vrend_renderer.c b/src/vrend/vrend_renderer.c
+index 3282e399..2da21f11 100644
+--- a/src/vrend/vrend_renderer.c
++++ b/src/vrend/vrend_renderer.c
+@@ -4037,11 +4037,16 @@ static inline void vrend_sync_shader_io(struct vrend_sub_context *sub_ctx,
+       key->ssbo_binding_offset = prev->sinfo.ssbo_last_binding + 1;
+       key->image_binding_offset = prev->sinfo.image_last_binding + 1;
+ 
+-      key->num_in_clip = sub_ctx->shaders[prev_type]->current->var_sinfo.num_out_clip;
+-      key->num_in_cull = sub_ctx->shaders[prev_type]->current->var_sinfo.num_out_cull;
++      /* A malicious guest can bind a previous-stage shader that has no compiled
++       * variant selected yet (->current == NULL), e.g. by supplying malformed
++       * TGSI. Guard the dereference to avoid a NULL-pointer crash (guest->host DoS). */
++      if (sub_ctx->shaders[prev_type]->current) {
++         key->num_in_clip = sub_ctx->shaders[prev_type]->current->var_sinfo.num_out_clip;
++         key->num_in_cull = sub_ctx->shaders[prev_type]->current->var_sinfo.num_out_cull;
+ 
+-      if (vrend_state.use_gles && type == PIPE_SHADER_FRAGMENT)
+-         key->fs.available_color_in_bits = sub_ctx->shaders[prev_type]->current->var_sinfo.legacy_color_bits;
++         if (vrend_state.use_gles && type == PIPE_SHADER_FRAGMENT)
++            key->fs.available_color_in_bits = sub_ctx->shaders[prev_type]->current->var_sinfo.legacy_color_bits;
++      }
+    }
+ 
+    enum pipe_shader_type next_type = PIPE_SHADER_INVALID;
