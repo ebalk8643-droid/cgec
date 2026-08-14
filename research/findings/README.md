@@ -14,6 +14,7 @@ Commit studied: virglrenderer `7fcfce49616974dc7050fdbfb5bb915f4448d270` (HEAD, 
 | 02 | fd use-after-close: `gem_close(fd,…)` after `close(fd)` on error paths | `i915/i915_resource.c` `i915_renderer_attach_resource` | UAF-of-fd (like panfrost `54b362cd`) | `54b362cd` | i915 (Intel) → ChromeOS/Android-relevant, but error-path/low-severity |
 | 03 | off-by-one image index bound (`>` vs `>=`) → `images[32]` in-struct over-read + `1<<32` UB | `vrend/vrend_shader.c` `translate_load` | off-by-one / incomplete fix of `9f1ca944` | `9f1ca944` | GL path (ChromeOS/Android), LOW severity (in-struct over-read) |
 | 04 | **NULL-deref** `prev->current` unchecked → SIGSEGV | `vrend/vrend_renderer.c` `vrend_sync_shader_io` (4040) | NULL-ptr deref / guest→host DoS | — (new) | **RUNTIME-CONFIRMED (5/5 ASan SEGV)**; GL path, guest TGSI → host crash. repro-crash.bin + fix.patch |
+| 05 | **NULL-deref** `shaders[FS]->current` unchecked → SEGV in memcpy (`key->fs_info = fs->var_sinfo.fs_info`) | `vrend/vrend_renderer.c` `vrend_sync_shader_io` (4134, next-stage) | NULL-ptr deref / guest→host DoS | sibling of 04 | **RUNTIME-CONFIRMED (ASan SEGV @0x10)**; found after patching 04. Comprehensive fix in finding-04/fix-comprehensive.patch covers both |
 
 ## Checked and found HARDENED (no bug)
 - msm `gem_submit` (size_add/size_mul + `>hdr->len`), i915 `execbuffer2` (same), amdgpu `cs_submit`
